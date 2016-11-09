@@ -1,0 +1,17 @@
+CREATE DATABASE sensoriamento
+
+CREATE TABLE log(
+ID 		int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+DataHora 	timestamp NOT NULL,
+Sensor1 	int NOT NULL,
+Sensor2 	int NOT NULL,
+Sensor3 	int NOT NULL
+) ENGINE=MyISAM
+
+
+Buscar dados do dia:
+"SELECT TIME(DataHora), Sensor1, Sensor2, Sensor3 FROM log where DataHora LIKE '%" + DateTime.Now.ToString("yyyy-MM-dd") + "%'"
+
+Buscar dados por data e fazer média dos valores dos sensores em cada dia:
+"SELECT DATE(DataHora), AVG(Sensor1), AVG(Sensor2), AVG(Sensor3) FROM log group by DATE(DataHora)"
+
