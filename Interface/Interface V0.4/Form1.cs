@@ -20,6 +20,8 @@ namespace WindowsFormsApplication1
 
         string RxString;
         int tipo = 0;
+        int at = 0;
+        bool ignore = false;
 
         public Form1()
         {
@@ -49,7 +51,7 @@ namespace WindowsFormsApplication1
             Diminuir();
         }
 
-        int valor1, valor2, valor3;
+        int valor1, valor2, valor3, valor4;
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -122,19 +124,29 @@ namespace WindowsFormsApplication1
 
                 if (serialPort1.IsOpen)
                 {
+                    ignore = true;
+
                     botConectar.Text = "Desconectar";
                     CBPorta.Enabled = false;
                     CBbaudRate.Enabled = false;
                     botAtualizar.Enabled = false;
                     //CBTipo.Enabled = false;
                     Aumentar();
+                    
+                    serialPort1.Write("5");
+
+                    ignore = false;
                 }
+
             }
             else
             {
 
                 try
                 {
+                    ignore = true;
+                    serialPort1.Write("6");
+
                     serialPort1.Close();
                     CBPorta.Enabled = true;
                     CBbaudRate.Enabled = true;
@@ -143,6 +155,13 @@ namespace WindowsFormsApplication1
                     botAtualizar.Enabled = true;
                     LimpaTudo();
                     Diminuir();
+
+                    if (pictureBox1.Visible)
+                        pictureBox1.Visible = false;
+
+                    StatusAtuador.Text = "";
+
+                    ignore = false;
                 }
                 catch
                 {
@@ -151,13 +170,7 @@ namespace WindowsFormsApplication1
 
             }
         }
-
-        private void button4_Click(object sender, EventArgs e)
-        {
-            if (serialPort1.IsOpen == true)          //porta está aberta
-                serialPort1.Write("Teste");      
-        }
-
+        
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
             if (serialPort1.IsOpen == true)  // se porta aberta
@@ -392,8 +405,8 @@ namespace WindowsFormsApplication1
         }
 
         private void trataDadoRecebido(object sender, EventArgs e)
-        {
-            string pattern = "(:)";
+       {
+           string pattern = "(:)";
 
             string[] substrings = System.Text.RegularExpressions.Regex.Split(RxString, pattern);    // Split on hyphens
 
@@ -410,6 +423,11 @@ namespace WindowsFormsApplication1
             if (!(Int32.TryParse(substrings[4], out valor3)))
             {
                 valor3 = progressBar3.Value;
+            }
+
+            if (!(Int32.TryParse(substrings[6], out valor4)))
+            {
+                //...
             }
 
             gravarBanco(valor1, valor2, valor3);
@@ -432,8 +450,11 @@ namespace WindowsFormsApplication1
 
         private void serialPort1_DataReceived_1(object sender, SerialDataReceivedEventArgs e)
         {
-            RxString = serialPort1.ReadLine();                      //le o dado disponível na serial
-            this.Invoke(new EventHandler(trataDadoRecebido));       //chama outra thread para escrever o dado no text box
+            if(ignore == false)
+            { 
+                RxString = serialPort1.ReadLine();                      //le o dado disponível na serial
+                this.Invoke(new EventHandler(trataDadoRecebido));       //chama outra thread para escrever o dado no text box
+            }
         }
 
         private void atualizaTextBox()
@@ -451,6 +472,23 @@ namespace WindowsFormsApplication1
                 case 2:
                     textBoxReceber.Text = valor3.ToString() + "db";
                     break;
+            }
+
+            if (valor4 == 1)
+            {
+                StatusAtuador.Text = "Ligado";
+                pictureBox1.Image = Properties.Resources.verd;
+
+                if(!pictureBox1.Visible)
+                    pictureBox1.Visible = true;
+            }
+            else
+            {
+                StatusAtuador.Text = "Desligado";
+                pictureBox1.Image = Properties.Resources.verm;
+
+                if (!pictureBox1.Visible)
+                    pictureBox1.Visible = true;
             }
         }
 
@@ -509,6 +547,37 @@ namespace WindowsFormsApplication1
                         tipo = 2;
                         break;
                     }
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+
+            if (serialPort1.IsOpen == true)
+            {
+                if (!pictureBox1.Visible)
+                    pictureBox1.Visible = true;
+
+                ignore = true;
+
+                if (at == 0)
+                {
+                    serialPort1.Write("1");
+                    StatusAtuador.Text = "Ligado";
+                    pictureBox1.Image = Properties.Resources.verd;
+                    button2.Text = "Desligar Atuador";
+                    at = 1;
+                }
+                else
+                {
+                    serialPort1.Write("0");
+                    StatusAtuador.Text = "Desligado";
+                    pictureBox1.Image = Properties.Resources.verm;
+                    button2.Text = "Ligar Atuador";
+                    at = 0;
+                }
+
+                ignore = false;
             }
         }
     }
