@@ -12,59 +12,127 @@ RF24 radio(9,10);
 //Define o endereco para comunicacao entre os modulos
 const uint64_t pipe = 0xE14BC8F482LL;
 
+#define atuador 4
+
+int vatuador;
+
+char Envio[15];
+
 void setup()
 {
+  pinMode(atuador, OUTPUT);
   Serial.begin(9600);
-  vw_set_rx_pin(7);           // Define o pino 5 do Arduino como entrada de dados do receptor
+  vw_set_rx_pin(8);           // Define o pino 7 do Arduino como entrada de dados do receptor
+  //vw_set_tx_pin(7);          
   vw_setup(2000);             // Bits por segundo
-  vw_rx_start();              // Inicializa o receptor 
+  pinMode(12, INPUT);
   
   radio.begin();
-  //Entra em modo de transmissao
+  
+  //Entra em modo de recepcao
   radio.openWritingPipe(pipe);
+  radio.openReadingPipe(1,pipe);
+  radio.startListening();
+  
+  // Inicia Receptor RF433
+  vw_rx_start();
 }
 
-int flag, lm35, mult, value;
+int lm35, mult, value;
+int dado;
 
 void loop()
-{   
-  flag = 0;
+{     
+  dado = 0;
   
   uint8_t message[VW_MAX_MESSAGE_LEN];
   uint8_t msgLength = VW_MAX_MESSAGE_LEN;
   
   if(vw_get_message(message, &msgLength)) // Non-blocking
   {
-       value = 0;
+    value = 0;
        
-       for (int i = 0; i < msgLength; i++)
+    for (int i = 0; i < msgLength-2; i++)
+    {
+       //Serial.write(message[i]);
+          
+       mult = 1;
+          
+       for(int k = 0; k < msgLength-i-3; k++)
        {
-          //Serial.write(message[i]);
-          
-          mult = 1;
-          
-          for(int k = 0; k < msgLength-i-1; k++)
-          {
-            mult *= 10;
-          }
-          
-          if(i != 2)
-            value += ((int)((char*)message[i]) - '0') * (mult);
-          else
-            value += ((int)((char*)message[i]) - '0');          
+         mult *= 10;
        }
+         
+       if(i != 2)
+         value += ((int)((char*)message[i]) - '0') * (mult);
+       else
+         value += ((int)((char*)message[i]) - '0');          
+    }
 
-       value += 1000;
-       lm35 = (float(analogRead(A0))*5/(1023))/0.01;
+    //value += 1000;
+    lm35 = (float(analogRead(A0))*5/(1023))/0.01;
+      
+    radio.stopListening();
+    
+    Serial.print("Sensor1: ");
+    Serial.println(value);
+    radio.write(&value,sizeof(int));
+    //delay(10);
+      
+    Serial.print("Sensor2: ");
+    Serial.println(lm35);
+    radio.write(&lm35,sizeof(int));
+    //delay(10);
+
+    Serial.print("Atuador: ");
+    if(digitalRead(4))
+    {
+      Serial.println("Ligado");
+      vatuador = 1;
+      radio.write(&vatuador,sizeof(int));
+    }
+    else
+    {
+      Serial.println("Desligado");
+      vatuador = 0;
+      radio.write(&vatuador,sizeof(int));
+    }
        
-       Serial.print("Sensor1: ");
-       Serial.println(value);
-       radio.write(&value,sizeof(int));
-       delay(50);
-       
-       Serial.print("Sensor2: ");
-       Serial.println(lm35);
-       radio.write(&lm35,sizeof(int));
-       delay(50);
+    radio.startListening();
+  }  
+
+  if(radio.available())
+  {
+    //Verifica se ha sinal de radio
+    while(radio.available())
+    {
+        radio.read(&dado,sizeof(int));
+        Serial.print("Dado Recebido: ");
+        Serial.println(dado);
+    }
+    
+    /*radio.stopListening();
+    Serial.print("Enviando de volta: ");
+    Serial.println(dado);
+    radio.write(&dado,sizeof(int));
+    delay(30);
+    radio.startListening();*/
+
+    if(dado == 1)
+    {
+      digitalWrite(atuador, HIGH);
+    }
+    else
+    {
+      digitalWrite(atuador, LOW);
+    }
   }
+  
+}
+
+
+void send (char *message)
+{
+  vw_send((uint8_t *)message, strlen(message));
+  vw_wait_tx(); // Aguarda o envio de dados
 }
