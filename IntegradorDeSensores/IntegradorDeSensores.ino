@@ -69,11 +69,12 @@ void loop()
          value += ((int)((char*)message[i]) - '0');          
     }
 
-    //value += 1000;
     lm35 = (float(analogRead(A0))*5/(1023))/0.01;
-      
-    radio.stopListening();
     
+    //value += 1000;
+    
+    radio.stopListening();
+    /*
     Serial.print("Sensor1: ");
     Serial.println(value);
     radio.write(&value,sizeof(int));
@@ -83,27 +84,38 @@ void loop()
     Serial.println(lm35);
     radio.write(&lm35,sizeof(int));
     //delay(10);
-
-    Serial.print("Atuador: ");
+    
+    Serial.print("Atuador: ");*/
+    
     if(digitalRead(4))
     {
-      Serial.println("Ligado");
+      //Serial.println("Ligado");
       vatuador = 1;
-      radio.write(&vatuador,sizeof(int));
+      //radio.write(&vatuador,sizeof(int));
     }
     else
     {
-      Serial.println("Desligado");
+      //Serial.println("Desligado");
       vatuador = 0;
-      radio.write(&vatuador,sizeof(int));
+      //radio.write(&vatuador,sizeof(int));
     }
-       
+
+    String teste = (String)value + "L" + (String)lm35 + "M" + (String)vatuador;
+    const char * envio = teste.c_str();
+ 
+    Serial.println(envio);
+    radio.write(envio,11);
+    delay(50);
+    
     radio.startListening();
   }  
 
   if(radio.available())
   {
     //Verifica se ha sinal de radio
+    
+    Serial.print("Dado Recebido: ");
+    
     while(radio.available())
     {
         radio.read(&dado,sizeof(int));
